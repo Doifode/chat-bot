@@ -27,7 +27,8 @@ def get_chat_messages(db:Session,chat_id:uuid.UUID)->list[Message]:
     return db.scalars(stmt).all()
 
 def post_message(db:Session,chat_id:uuid.UUID,content:str)->Message:
-    if db.get(Chat,chat_id) is None:
+    chat = db.get(Chat,chat_id)
+    if chat is None:
         raise ValueError("Chat not found") 
     
     user_msg = Message(chat_id=chat_id,role="user",content=content)
@@ -38,7 +39,7 @@ def post_message(db:Session,chat_id:uuid.UUID,content:str)->Message:
     # convert to role content format
     
     history_dicts = [{"role": m.role, "content": m.content} for m in history]
-    reply_text = generate_reply(history_dicts)
+    reply_text = generate_reply(history_dicts ,_build_system_prompt(chat.user))
     
     assistant_message = Message(chat_id=chat_id,role="assistant",content= reply_text)
     db.add(assistant_message)
@@ -46,3 +47,17 @@ def post_message(db:Session,chat_id:uuid.UUID,content:str)->Message:
     db.refresh(assistant_message)
     return assistant_message
     
+    
+def _build_system_prompt(user :User)->str:
+    base = "You are a helpful assistant."
+    meta = user.user_metadata
+    if meta is None :
+        return base
+    facts = []
+    if meta.occupation:
+        facts.append(f"The user's occupation is {meta.occupation}")
+    if meta.bio:
+        facts.append(f"About the user : {meta.bio}")
+    if not facts: 
+        return base
+    return f"{base} "+ " ".join(facts) + " Use this context when relevant."

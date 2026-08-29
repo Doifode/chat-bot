@@ -12,7 +12,7 @@ api_key = os.getenv("GEMINI_API_KEY")
 
 _client = genai.Client(api_key=api_key)
 
-def generate_reply(history: list[dict]) -> str:
+def generate_reply(history: list[dict],system_instruction:str|None=None) -> str:
     contents = []
     for msg in history:
         # your DB uses "user"/"assistant"; Gemini uses "user"/"model"
@@ -26,9 +26,8 @@ def generate_reply(history: list[dict]) -> str:
         model=MODEL,
         contents=contents,                          # the converted list, not `history`
         config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=system_instruction or SYSTEM_PROMPT,
             temperature=TEMPERATURE,
-            
         ),
     )
     return response.text
