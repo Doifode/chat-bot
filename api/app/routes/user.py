@@ -13,11 +13,10 @@ router = APIRouter(
 )
 
 
-@router.post("/")
+@router.post("/",response_model=UserRead)
 def create_user_route(
     user_data: UserCreate,
     db: Session = Depends(get_db),
-    response_model=UserRead
 ):
     try:
         return create_user(
