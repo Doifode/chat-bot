@@ -22,7 +22,8 @@ def create_user_route(
         return create_user(
             db=db,
             name=user_data.name,
-            email=user_data.email
+            email=user_data.email,
+            password=user_data.password
         )
         
     except ValueError as e:

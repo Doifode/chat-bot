@@ -41,3 +41,8 @@ class User(Base):
     chats: Mapped[list["Chat"]] = relationship(
         back_populates="user"
     )
+    
+    hashed_password:Mapped[str]=mapped_column(
+        String(255),
+        nullable=True
+    )
