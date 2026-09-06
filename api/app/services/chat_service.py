@@ -3,8 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models.message import Message
 from app.models.chat import Chat
-from app.services.llm import generate_reply
+from app.services.llm import generate_reply,generate_reply_stream
 from app.models.user import User
+from typing import Iterator
 
 
 def create_chat(db:Session ,user_id:uuid.UUID,title:str)->Chat:
@@ -46,6 +47,28 @@ def post_message(db:Session,chat_id:uuid.UUID,content:str)->Message:
     db.commit()
     db.refresh(assistant_message)
     return assistant_message
+    
+    
+def stream_message(db:Session,chat_id:uuid.UUID,content:str)->Iterator[str]:
+    chat = db.get(Chat,chat_id)
+    if chat is None:
+        raise ValueError("Chat not found") 
+    
+    user_msg = Message(chat_id=chat_id,role="user",content=content)
+    db.add(user_msg)
+    db.flush()
+    stmt = select(Message).where(Message.chat_id == chat_id).order_by(Message.created_at)
+    history_dicts = [{"role": m.role, "content": m.content} for m in db.scalars(stmt).all()]
+    system_prompt = _build_system_prompt(chat.user)
+    
+    def generator():
+        chunks=[]
+        for piece in generate_reply_stream(history_dicts,system_prompt):
+            chunks.append(piece)
+            yield piece
+        db.add(Message(chat_id=chat_id,role="assistant",content="".join(chunks)))
+        db.commit()
+    return generator()
     
     
 def _build_system_prompt(user :User)->str:

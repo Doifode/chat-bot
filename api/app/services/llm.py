@@ -13,15 +13,7 @@ api_key = os.getenv("GEMINI_API_KEY")
 _client = genai.Client(api_key=api_key)
 
 def generate_reply(history: list[dict],system_instruction:str|None=None) -> str:
-    contents = []
-    for msg in history:
-        # your DB uses "user"/"assistant"; Gemini uses "user"/"model"
-        gemini_role = "model" if msg["role"] == "assistant" else "user"
-        contents.append({
-            "role": gemini_role,
-            "parts": [{"text": msg["content"]}],   # text goes in parts, as a list
-        })
-
+    contents = _to_gemini_contents(history)
     response = _client.models.generate_content(
         model=MODEL,
         contents=contents,                          # the converted list, not `history`
@@ -31,3 +23,31 @@ def generate_reply(history: list[dict],system_instruction:str|None=None) -> str:
         ),
     )
     return response.text
+
+
+def generate_reply_stream(history: list[dict], system_instruction: str | None = None):
+    contents = _to_gemini_contents(history)
+    stream = _client.models.generate_content_stream(
+            model=MODEL,
+            contents=contents,                          # the converted list, not `history`
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction or SYSTEM_PROMPT,
+                temperature=TEMPERATURE,
+                ),
+    )
+    for chunk in stream:
+        if chunk.text:
+            yield chunk.text
+            
+
+
+def _to_gemini_contents(history:list[dict])->list[dict]:
+    contents = []
+    for msg in history:
+        # your DB uses "user"/"assistant"; Gemini uses "user"/"model"
+        gemini_role = "model" if msg["role"] == "assistant" else "user"
+        contents.append({
+            "role": gemini_role,
+            "parts": [{"text": msg["content"]}],   # text goes in parts, as a list
+        })
+    return contents
