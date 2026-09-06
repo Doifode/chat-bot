@@ -6,7 +6,6 @@ from datetime import datetime
 
 class ChatCreate (BaseModel):
     title:str |None = None
-    user_id:uuid.UUID
     
     
 class ChatRead (BaseModel):

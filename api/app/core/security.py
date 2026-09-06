@@ -20,3 +20,28 @@ def create_access_token(user_id)->str:
         "exp": expire
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from app.db.database import get_db
+from app.models.user import User
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    credentials_error = HTTPException(status_code=401, detail="Could not validate credentials")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise credentials_error
+    except jwt.PyJWTError:
+        raise credentials_error
+
+    user = db.get(User, user_id)
+    if user is None:
+        raise credentials_error
+    return user
