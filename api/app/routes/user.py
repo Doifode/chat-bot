@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.services.user_service import create_user
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate,UserRead
 from app.models import User
 
 router = APIRouter(
@@ -16,7 +16,8 @@ router = APIRouter(
 @router.post("/")
 def create_user_route(
     user_data: UserCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    response_model=UserRead
 ):
     try:
         return create_user(
